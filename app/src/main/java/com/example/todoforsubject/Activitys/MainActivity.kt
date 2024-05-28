@@ -40,7 +40,7 @@ class MainActivity : AppCompatActivity(), TaskAdapter.onItemClickListener {
 
             addTaskButton.setOnClickListener {
                 val intent = Intent(this@MainActivity, TaskActivity::class.java)
-                startActivity(intent)
+                startActivityForResult(intent, REQUEST_CODE_ADD_TASK)
             }
         }
     }
@@ -51,6 +51,7 @@ class MainActivity : AppCompatActivity(), TaskAdapter.onItemClickListener {
         val cursor: Cursor = db.rawQuery("SELECT * FROM ${TaskDataHelperForRV.TASK_TABLE}", null)
 
         if (cursor.moveToFirst()) {
+            taskList.clear()
             do {
                 val titleIndex = cursor.getColumnIndex(TaskDataHelperForRV.TASK_NAME)
                 val stateButtonIndex = cursor.getColumnIndex(TaskDataHelperForRV.IMAGE_STATE)
@@ -59,9 +60,7 @@ class MainActivity : AppCompatActivity(), TaskAdapter.onItemClickListener {
                 val stateButton = cursor.getInt(stateButtonIndex)
 
                 val task = TaskForRecycleView(title, stateButton)
-                if (!taskList.contains(task)) {
-                    taskList.add(task)
-                }
+                taskList.add(task)
             } while (cursor.moveToNext())
 
             cursor.close()
@@ -80,5 +79,17 @@ class MainActivity : AppCompatActivity(), TaskAdapter.onItemClickListener {
         val intent = Intent(this, TaskActivity::class.java)
         intent.putExtra("taskTitle", task.title)
         startActivity(intent)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_CODE_ADD_TASK && resultCode == RESULT_OK) {
+            updateDataFromDataBase()
+            adapter.setData(taskList)
+        }
+    }
+
+    companion object {
+        const val REQUEST_CODE_ADD_TASK = 1
     }
 }

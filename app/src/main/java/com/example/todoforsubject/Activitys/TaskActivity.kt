@@ -7,18 +7,23 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.todoforsubject.DBhelpers.TaskDataHelperForActivity
+import com.example.todoforsubject.DBhelpers.TaskDataHelperForRV
 import com.example.todoforsubject.Model.TaskForActivity
+import com.example.todoforsubject.Model.TaskForRecycleView
 import com.example.todoforsubject.R
 import com.example.todoforsubject.databinding.ActivityTaskBinding
 
 class TaskActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityTaskBinding
-    private var stateTask = 0
+    private var stateTask = R.drawable.ic_create_task
 
     private lateinit var dbHelperForActivity: TaskDataHelperForActivity
-    private lateinit var db: SQLiteDatabase
+    private lateinit var dbHelperForRV: TaskDataHelperForRV
+    private lateinit var dbForActivity: SQLiteDatabase
+    private lateinit var dbForRV: SQLiteDatabase
     private lateinit var taskForActivity: TaskForActivity
+    private lateinit var taskForRV: TaskForRecycleView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -26,24 +31,24 @@ class TaskActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         dbHelperForActivity = TaskDataHelperForActivity(this)
-        db = dbHelperForActivity.writableDatabase
+        dbHelperForRV = TaskDataHelperForRV(this)
+        dbForActivity = dbHelperForActivity.writableDatabase
+        dbForRV = dbHelperForRV.writableDatabase
 
         val taskTitle = intent.getStringExtra("taskTitle")
-
         if (taskTitle != null) {
             loadTaskData(taskTitle)
         }
 
-        // Initialize icon based on stateTask
         updateTaskStateIcon()
 
         binding.imageState.setOnClickListener {
-            handleStateChange()
+            handleStateChange(taskTitle)
         }
     }
 
     private fun loadTaskData(taskTitle: String) {
-        val cursor: Cursor = db.query(
+        val cursor: Cursor = dbForActivity.query(
             TaskDataHelperForActivity.TASK_TABLE,
             null,
             "${TaskDataHelperForActivity.TASK_NAME} = ?",
@@ -70,44 +75,67 @@ class TaskActivity : AppCompatActivity() {
     }
 
     private fun updateTaskStateIcon() {
-        when (stateTask) {
-            0 -> binding.imageState.setImageResource(R.drawable.ic_create_task)
-            1 -> {
-                binding.imageState.setImageResource(R.drawable.ic_complete_task)
-                binding.deleteBt.setImageResource(R.drawable.ic_delete_task)
-            }
-            2 -> binding.imageState.setImageResource(R.drawable.ic_delete_task)
-        }
+        binding.imageState.setImageResource(stateTask)
     }
 
-    private fun handleStateChange() {
+    private fun handleStateChange(taskTitle: String?) {
         when (stateTask) {
-            0 -> {
+            R.drawable.ic_create_task -> {
                 if (checkValidation()) {
-                    taskForActivity = createTaskForActivity()
-                    stateTask = 1
-                    db.insert(TaskDataHelperForActivity.TASK_TABLE, null, contentValuesForActivity(taskForActivity))
-                    finish()
+                    if (taskTitle == null) {
+                        taskForActivity = createTaskForActivity()
+                        taskForRV = createTaskForRV()
+
+                        stateTask = R.drawable.ic_complete_task
+                        dbForActivity.insert(TaskDataHelperForActivity.TASK_TABLE, null, contentValuesForActivity(taskForActivity))
+                        dbForRV.insert(TaskDataHelperForRV.TASK_TABLE, null, contentValuesForRecycleView(taskForRV))
+
+                        // Return to MainActivity with result to refresh the RecyclerView
+                        setResult(RESULT_OK)
+                        finish()
+                    } else {
+                        updateTaskState(taskTitle, R.drawable.ic_complete_task)
+                    }
                 }
             }
-            1 -> {
-                taskForActivity.stateImage = R.drawable.ic_delete_task
-                binding.imageState.setImageResource(taskForActivity.stateImage)
-                stateTask = 2
-                finish()
+            R.drawable.ic_complete_task -> {
+                updateTaskState(taskTitle!!, R.drawable.ic_delete_task)
             }
-            2 -> {
+            R.drawable.ic_delete_task -> {
                 // Handle deletion if necessary
             }
         }
     }
 
+    private fun updateTaskState(taskTitle: String, newState: Int) {
+        val contentValues = ContentValues().apply {
+            put(TaskDataHelperForActivity.IMAGE_STATE, newState)
+        }
+        dbForActivity.update(
+            TaskDataHelperForActivity.TASK_TABLE,
+            contentValues,
+            "${TaskDataHelperForActivity.TASK_NAME} = ?",
+            arrayOf(taskTitle)
+        )
+        stateTask = newState
+        updateTaskStateIcon()
+        setResult(RESULT_OK)
+        finish()
+    }
+
     private fun contentValuesForActivity(task: TaskForActivity): ContentValues {
-        val contentValues = ContentValues()
-        contentValues.put(TaskDataHelperForActivity.TASK_NAME, task.task_title)
-        contentValues.put(TaskDataHelperForActivity.TASK_INFO, task.infoTask)
-        contentValues.put(TaskDataHelperForActivity.IMAGE_STATE, task.stateImage)
-        return contentValues
+        return ContentValues().apply {
+            put(TaskDataHelperForActivity.TASK_NAME, task.task_title)
+            put(TaskDataHelperForActivity.TASK_INFO, task.infoTask)
+            put(TaskDataHelperForActivity.IMAGE_STATE, task.stateImage)
+        }
+    }
+
+    private fun contentValuesForRecycleView(task: TaskForRecycleView): ContentValues {
+        return ContentValues().apply {
+            put(TaskDataHelperForRV.TASK_NAME, task.title)
+            put(TaskDataHelperForRV.IMAGE_STATE, task.stateButton)
+        }
     }
 
     private fun createTaskForActivity(): TaskForActivity {
@@ -115,6 +143,13 @@ class TaskActivity : AppCompatActivity() {
             task_title = binding.taskTitle.text.toString(),
             infoTask = binding.infoOfTask.text.toString(),
             stateImage = R.drawable.ic_create_task
+        )
+    }
+
+    private fun createTaskForRV(): TaskForRecycleView {
+        return TaskForRecycleView(
+            title = binding.taskTitle.text.toString(),
+            stateButton = R.drawable.ic_state_pending
         )
     }
 
