@@ -70,8 +70,6 @@ class MainActivity : AppCompatActivity(), TaskAdapter.onItemClickListener {
         db.close()
     }
 
-
-
     override fun onStart() {
         super.onStart()
         updateDataFromDataBase()
@@ -83,6 +81,7 @@ class MainActivity : AppCompatActivity(), TaskAdapter.onItemClickListener {
         intent.putExtra("taskTitle", task.title)
         startActivity(intent)
     }
+
     override fun onDeleteTask(task: TaskForRecycleView) {
         val dbDataHelperForRV = TaskDataHelperForRV(this)
         val db = dbDataHelperForRV.writableDatabase
@@ -103,7 +102,6 @@ class MainActivity : AppCompatActivity(), TaskAdapter.onItemClickListener {
             adapter.setData(taskList)
         }
     }
-
 
     companion object {
         const val REQUEST_CODE_ADD_TASK = 1

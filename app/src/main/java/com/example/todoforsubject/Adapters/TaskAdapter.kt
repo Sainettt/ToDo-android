@@ -20,7 +20,6 @@ class TaskAdapter(
         fun onDeleteTask(task: TaskForRecycleView)
     }
 
-
     inner class TaskHolder(view: View) : RecyclerView.ViewHolder(view) {
         val binding = TaskInActivityBinding.bind(view)
 
@@ -45,9 +44,9 @@ class TaskAdapter(
                     }
                 }
                 notifyItemChanged(adapterPosition)
-                }
             }
         }
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TaskHolder {
         val view = LayoutInflater.from(parent.context)

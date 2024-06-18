@@ -18,7 +18,6 @@ class TaskActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityTaskBinding
     private var stateTaskForActivity = R.drawable.ic_create_task
-    private var stateTaskForRV = R.drawable.ic_state_pending
 
     private lateinit var dbHelperForActivity: TaskDataHelperForActivity
     private lateinit var dbHelperForRV: TaskDataHelperForRV
@@ -41,7 +40,6 @@ class TaskActivity : AppCompatActivity() {
         dbForActivity = dbHelperForActivity.writableDatabase
         dbForRV = dbHelperForRV.writableDatabase
 
-        // Инициализируем saveButton как INVISIBLE
         binding.saveButton.setImageResource(R.drawable.ic_save_task)
         binding.saveButton.visibility = View.INVISIBLE
 
@@ -49,9 +47,9 @@ class TaskActivity : AppCompatActivity() {
         if (taskTitle != null) {
             isNewTask = false
             loadTaskData(taskTitle)
-            binding.saveButton.visibility = View.VISIBLE // Показать кнопку SAVE для существующих задач
+            binding.saveButton.visibility = View.VISIBLE
         } else {
-            binding.saveButton.visibility = View.GONE // Скрыть кнопку SAVE для новых задач
+            binding.saveButton.visibility = View.GONE
             updateTaskStateIcon()
         }
 
@@ -62,22 +60,12 @@ class TaskActivity : AppCompatActivity() {
         binding.saveButton.setOnClickListener {
             if (checkValidation()) {
                 if (isNewTask) {
-                    // Логика для создания новой задачи
-                    taskForActivity = createTaskForActivity()
-                    taskForRV = createTaskForRV()
-
-                    dbForActivity.insert(TaskDataHelperForActivity.TASK_TABLE, null, contentValuesForActivity(taskForActivity))
-                    dbForRV.insert(TaskDataHelperForRV.TASK_TABLE, null, contentValuesForRecycleView(taskForRV))
-
-                    setResult(RESULT_OK)
-                    finish()
+                    saveNewTask()
                 } else {
-                    // Логика для обновления существующей задачи
-                    taskForActivity = createTaskForActivity()
                     updateTaskData(taskTitle)
-                    setResult(RESULT_OK)
-                    finish()
                 }
+                setResult(RESULT_OK)
+                finish()
             }
         }
     }
@@ -120,33 +108,33 @@ class TaskActivity : AppCompatActivity() {
             R.drawable.ic_create_task -> {
                 if (checkValidation()) {
                     if (taskTitle == null) {
-                        taskForActivity = createTaskForActivity()
-                        taskForRV = createTaskForRV()
-
                         stateTaskForActivity = R.drawable.ic_complete_task
-                        dbForActivity.insert(TaskDataHelperForActivity.TASK_TABLE, null, contentValuesForActivity(taskForActivity))
-                        dbForRV.insert(TaskDataHelperForRV.TASK_TABLE, null, contentValuesForRecycleView(taskForRV))
-
-                        setResult(RESULT_OK)
-                        finish()
+                        saveNewTask()
                     } else {
                         updateTaskState(taskTitle, R.drawable.ic_complete_task)
                     }
                 }
             }
             R.drawable.ic_complete_task -> {
-                updateTaskState(taskTitle!!, R.drawable.ic_delete_task)
                 stateTaskForActivity = R.drawable.ic_delete_task
+                updateTaskState(taskTitle!!, R.drawable.ic_delete_task)
             }
             R.drawable.ic_delete_task -> {
-                if (taskTitle != null) {
-                    deleteTask(taskTitle)
-                }
+                deleteTask(taskTitle!!)
+                finish()
             }
         }
     }
 
-    private fun updateTaskState(taskTitle: String?, newState: Int) {
+    private fun saveNewTask() {
+        taskForActivity = createTaskForActivity()
+        taskForRV = createTaskForRV()
+
+        dbForActivity.insert(TaskDataHelperForActivity.TASK_TABLE, null, contentValuesForActivity(taskForActivity))
+        dbForRV.insert(TaskDataHelperForRV.TASK_TABLE, null, contentValuesForRecycleView(taskForRV))
+    }
+
+    private fun updateTaskState(taskTitle: String, newState: Int) {
         val contentValues = ContentValues().apply {
             put(TaskDataHelperForActivity.IMAGE_STATE, newState)
         }
@@ -159,7 +147,6 @@ class TaskActivity : AppCompatActivity() {
         stateTaskForActivity = newState
         updateTaskStateIcon()
         setResult(RESULT_OK)
-        finish()
     }
 
     private fun deleteTask(taskTitle: String) {
@@ -174,15 +161,24 @@ class TaskActivity : AppCompatActivity() {
             arrayOf(taskTitle)
         )
         setResult(RESULT_OK)
-        finish()
     }
 
     private fun updateTaskData(taskTitle: String?) {
-        val contentValues = contentValuesForActivity(taskForActivity)
+        taskForActivity = createTaskForActivity()
+        taskForRV = createTaskForRV()
+
+        val contentValuesActivity = contentValuesForActivity(taskForActivity)
+        val contentValuesRV = contentValuesForRecycleView(taskForRV)
         dbForActivity.update(
             TaskDataHelperForActivity.TASK_TABLE,
-            contentValues,
+            contentValuesActivity,
             "${TaskDataHelperForActivity.TASK_NAME} = ?",
+            arrayOf(taskTitle)
+        )
+        dbForRV.update(
+            TaskDataHelperForRV.TASK_TABLE,
+            contentValuesRV,
+            "${TaskDataHelperForRV.TASK_NAME} = ?",
             arrayOf(taskTitle)
         )
     }
@@ -191,7 +187,7 @@ class TaskActivity : AppCompatActivity() {
         return ContentValues().apply {
             put(TaskDataHelperForActivity.TASK_NAME, task.task_title)
             put(TaskDataHelperForActivity.TASK_INFO, task.infoTask)
-            put(TaskDataHelperForActivity.IMAGE_STATE, task.stateImage)
+            put(TaskDataHelperForActivity.IMAGE_STATE, stateTaskForActivity)
         }
     }
 
@@ -206,7 +202,7 @@ class TaskActivity : AppCompatActivity() {
         return TaskForActivity(
             task_title = binding.taskTitle.text.toString(),
             infoTask = binding.infoOfTask.text.toString(),
-            stateImage = R.drawable.ic_create_task
+            stateImage = stateTaskForActivity
         )
     }
 
