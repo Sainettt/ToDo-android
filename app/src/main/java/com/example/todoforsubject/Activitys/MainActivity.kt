@@ -8,6 +8,7 @@ import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.todoforsubject.Adapters.TaskAdapter
+import com.example.todoforsubject.DBhelpers.TaskDataHelperForActivity
 import com.example.todoforsubject.Model.TaskForRecycleView
 import com.example.todoforsubject.databinding.ActivityMainBinding
 import com.example.todoforsubject.DBhelpers.TaskDataHelperForRV
@@ -20,11 +21,11 @@ class MainActivity : AppCompatActivity(), TaskAdapter.onItemClickListener {
     lateinit var adapter: TaskAdapter
 
     lateinit var dbDataHelperForRV: TaskDataHelperForRV
+    lateinit var dbDataHelperForActivity: TaskDataHelperForActivity
     lateinit var db: SQLiteDatabase
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d("onCreate", "Create")
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -62,15 +63,17 @@ class MainActivity : AppCompatActivity(), TaskAdapter.onItemClickListener {
                 val task = TaskForRecycleView(title, stateButton)
                 taskList.add(task)
             } while (cursor.moveToNext())
-
-            cursor.close()
-            db.close()
+        } else {
+            taskList.clear() // Добавляем очистку taskList если курсор пуст
         }
+        cursor.close()
+        db.close()
     }
+
+
 
     override fun onStart() {
         super.onStart()
-        Log.d("onStart", "Start")
         updateDataFromDataBase()
         adapter.setData(taskList)
     }
@@ -80,6 +83,18 @@ class MainActivity : AppCompatActivity(), TaskAdapter.onItemClickListener {
         intent.putExtra("taskTitle", task.title)
         startActivity(intent)
     }
+    override fun onDeleteTask(task: TaskForRecycleView) {
+        val dbDataHelperForRV = TaskDataHelperForRV(this)
+        val db = dbDataHelperForRV.writableDatabase
+        db.delete(
+            TaskDataHelperForRV.TASK_TABLE,
+            "${TaskDataHelperForRV.TASK_NAME} = ?",
+            arrayOf(task.title)
+        )
+        db.close()
+        updateDataFromDataBase()
+        adapter.setData(taskList)
+    }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
@@ -88,6 +103,7 @@ class MainActivity : AppCompatActivity(), TaskAdapter.onItemClickListener {
             adapter.setData(taskList)
         }
     }
+
 
     companion object {
         const val REQUEST_CODE_ADD_TASK = 1

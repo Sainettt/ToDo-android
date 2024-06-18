@@ -17,20 +17,37 @@ class TaskAdapter(
 
     interface onItemClickListener {
         fun onItemClick(task: TaskForRecycleView)
+        fun onDeleteTask(task: TaskForRecycleView)
     }
+
 
     inner class TaskHolder(view: View) : RecyclerView.ViewHolder(view) {
         val binding = TaskInActivityBinding.bind(view)
 
         fun bind(task: TaskForRecycleView) = with(binding) {
             titleTask.text = task.title
-            buttonStateTask.setImageResource(R.drawable.ic_state_pending)
+            buttonStateTask.setImageResource(task.stateButton)
 
             itemView.setOnClickListener {
                 clickListener.onItemClick(task)
             }
+
+            buttonStateTask.setOnClickListener {
+                when (task.stateButton) {
+                    R.drawable.ic_state_pending -> {
+                        task.stateButton = R.drawable.ic_completed
+                    }
+                    R.drawable.ic_completed -> {
+                        task.stateButton = R.drawable.ic_delete_rv_task
+                    }
+                    R.drawable.ic_delete_rv_task -> {
+                        clickListener.onDeleteTask(task)
+                    }
+                }
+                notifyItemChanged(adapterPosition)
+                }
+            }
         }
-    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TaskHolder {
         val view = LayoutInflater.from(parent.context)
