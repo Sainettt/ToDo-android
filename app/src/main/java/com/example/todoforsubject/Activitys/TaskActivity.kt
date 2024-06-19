@@ -18,6 +18,7 @@ class TaskActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityTaskBinding
     private var stateTaskForActivity = R.drawable.ic_create_task
+    private var stateTaskForRV = R.drawable.ic_state_pending // Состояние по умолчанию для RecyclerView
 
     private lateinit var dbHelperForActivity: TaskDataHelperForActivity
     private lateinit var dbHelperForRV: TaskDataHelperForRV
@@ -93,10 +94,32 @@ class TaskActivity : AppCompatActivity() {
             binding.infoOfTask.setText(taskForActivity.infoTask)
             stateTaskForActivity = taskForActivity.stateImage
 
+            // Загружаем состояние для RecyclerView
+            loadTaskStateForRV(taskTitle)
+
             updateTaskStateIcon()
 
             cursor.close()
         }
+    }
+
+    private fun loadTaskStateForRV(taskTitle: String) {
+        val cursor: Cursor = dbForRV.query(
+            TaskDataHelperForRV.TASK_TABLE,
+            null,
+            "${TaskDataHelperForRV.TASK_NAME} = ?",
+            arrayOf(taskTitle),
+            null,
+            null,
+            null
+        )
+
+        if (cursor.moveToFirst()) {
+            val stateButtonIndex = cursor.getColumnIndex(TaskDataHelperForRV.IMAGE_STATE)
+            stateTaskForRV = cursor.getInt(stateButtonIndex)
+        }
+
+        cursor.close()
     }
 
     private fun updateTaskStateIcon() {
@@ -128,7 +151,7 @@ class TaskActivity : AppCompatActivity() {
 
     private fun saveNewTask() {
         taskForActivity = createTaskForActivity()
-        taskForRV = createTaskForRV()
+        taskForRV = createTaskForRV() // Сохраняем состояние для RecyclerView только при создании новой задачи
 
         dbForActivity.insert(TaskDataHelperForActivity.TASK_TABLE, null, contentValuesForActivity(taskForActivity))
         dbForRV.insert(TaskDataHelperForRV.TASK_TABLE, null, contentValuesForRecycleView(taskForRV))
@@ -155,17 +178,13 @@ class TaskActivity : AppCompatActivity() {
             "${TaskDataHelperForActivity.TASK_NAME} = ?",
             arrayOf(taskTitle)
         )
-        dbForRV.delete(
-            TaskDataHelperForRV.TASK_TABLE,
-            "${TaskDataHelperForRV.TASK_NAME} = ?",
-            arrayOf(taskTitle)
-        )
+        // Не удаляем запись из RecyclerView, так как она должна сохраняться
         setResult(RESULT_OK)
     }
 
     private fun updateTaskData(taskTitle: String?) {
         taskForActivity = createTaskForActivity()
-        taskForRV = createTaskForRV()
+        taskForRV = createTaskForRV() // Сохраняем состояние для RecyclerView при обновлении задачи
 
         val contentValuesActivity = contentValuesForActivity(taskForActivity)
         val contentValuesRV = contentValuesForRecycleView(taskForRV)
@@ -207,9 +226,10 @@ class TaskActivity : AppCompatActivity() {
     }
 
     private fun createTaskForRV(): TaskForRecycleView {
+        // Здесь мы создаем объект TaskForRecycleView с текущим состоянием из TaskActivity
         return TaskForRecycleView(
             title = binding.taskTitle.text.toString(),
-            stateButton = R.drawable.ic_state_pending
+            stateButton = stateTaskForRV // Используем сохраненное состояние для RecyclerView
         )
     }
 

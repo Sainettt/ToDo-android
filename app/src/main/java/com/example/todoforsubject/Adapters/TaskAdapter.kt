@@ -1,10 +1,13 @@
 package com.example.todoforsubject.Adapters
 
+import android.content.ContentValues
 import android.content.Context
+import android.database.sqlite.SQLiteDatabase
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
+import com.example.todoforsubject.DBhelpers.TaskDataHelperForRV
 import com.example.todoforsubject.Model.TaskForRecycleView
 import com.example.todoforsubject.R
 import com.example.todoforsubject.databinding.TaskInActivityBinding
@@ -41,10 +44,27 @@ class TaskAdapter(
                     }
                     R.drawable.ic_delete_rv_task -> {
                         clickListener.onDeleteTask(task)
+                        return@setOnClickListener
                     }
                 }
+                saveStateToDatabase(task)
                 notifyItemChanged(adapterPosition)
             }
+        }
+
+        private fun saveStateToDatabase(task: TaskForRecycleView) {
+            val dbHelper = TaskDataHelperForRV(context)
+            val db: SQLiteDatabase = dbHelper.writableDatabase
+            val contentValues = ContentValues().apply {
+                put(TaskDataHelperForRV.IMAGE_STATE, task.stateButton)
+            }
+            db.update(
+                TaskDataHelperForRV.TASK_TABLE,
+                contentValues,
+                "${TaskDataHelperForRV.TASK_NAME} = ?",
+                arrayOf(task.title)
+            )
+            db.close()
         }
     }
 
