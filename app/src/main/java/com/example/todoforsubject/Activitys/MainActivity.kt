@@ -43,6 +43,22 @@ class MainActivity : AppCompatActivity(), TaskAdapter.onItemClickListener {
                 val intent = Intent(this@MainActivity, TaskActivity::class.java)
                 startActivityForResult(intent, REQUEST_CODE_ADD_TASK)
             }
+            searchBt.setOnClickListener {
+                performSearch()
+            }
+        }
+    }
+    private fun performSearch(){
+        val searchText = binding.searchText.text.toString().trim()
+        if (searchText.isNotEmpty()) {
+            val filteredList = taskList.filter { task ->
+                task.title.contains(searchText, ignoreCase = true)
+            }.toMutableList()
+
+            adapter.setData(filteredList)
+        } else {
+            // Если поле поиска пустое, отобразить все задачи
+            adapter.setData(taskList)
         }
     }
 
